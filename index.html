@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Twitter Export Cleaner</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2em;
+      max-width: 600px;
+      margin: auto;
+    }
+    input[type="file"] {
+      margin-bottom: 1em;
+    }
+    #output {
+      margin-top: 1em;
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      padding: 1em;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Twitter Export Cleaner</h1>
+  <p>Select your <code>tweet.js</code> file and this tool will give you a clean list of tweets to download as text.</p>
+
+  <input type="file" id="fileInput" accept=".js">
+  <button onclick="downloadCleaned()">Download Clean Tweets</button>
+
+  <pre id="output"></pre>
+
+  <script>
+    let cleanedText = '';
+
+    document.getElementById('fileInput').addEventListener('change', async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const text = await file.text();
+      const cleaned = text
+        .replace(/^.*?=\s*/, '') // remove JS wrapper
+        .replace(/;\s*$/, '');   // remove trailing semicolon
+
+      try {
+        const json = JSON.parse(cleaned);
+        const tweets = json.map(entry => entry.tweet?.full_text || '').filter(Boolean);
+        cleanedText = tweets.join('\n\n');
+        document.getElementById('output').textContent = `Loaded ${tweets.length} tweets. Ready to download.`;
+        document.getElementById('output').style.display = 'block';
+      } catch (e) {
+        alert('Could not parse the file. Make sure you selected the correct tweet.js file.');
+      }
+    });
+
+    function downloadCleaned() {
+      if (!cleanedText) {
+        alert("No tweets found yet.");
+        return;
+      }
+
+      const blob = new Blob([cleanedText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'cleaned-tweets.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
